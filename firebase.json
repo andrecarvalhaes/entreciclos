@@ -7,7 +7,15 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "cleanUrls": true,
-    "trailingSlash": false
+    "rewrites": [
+      {
+        "source": "/contas-a-pagar",
+        "destination": "/contas-a-pagar/index.html"
+      },
+      {
+        "source": "/contas-a-receber",
+        "destination": "/contas-a-receber/index.html"
+      }
+    ]
   }
 }
