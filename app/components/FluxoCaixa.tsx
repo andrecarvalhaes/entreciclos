@@ -143,13 +143,19 @@ export default function FluxoCaixa() {
         <div className="h-64 flex items-center justify-center text-sm text-gray-400">Carregando...</div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+          <ComposedChart
+            data={data}
+            margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+            barCategoryGap={mode === 'anual' ? '30%' : '15%'}
+            barGap={2}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis
               dataKey="label"
               tick={{ fontSize: 11, fill: '#9ca3af' }}
               axisLine={false}
               tickLine={false}
+              interval={mode === 'mensal' ? 2 : 0}
             />
             <YAxis
               tick={{ fontSize: 11, fill: '#9ca3af' }}
@@ -161,8 +167,8 @@ export default function FluxoCaixa() {
             <Legend
               formatter={v => <span style={{ fontSize: 11, color: '#6b7280' }}>{v}</span>}
             />
-            <Bar dataKey="entradas" name="Entradas" fill="#87CEEB" radius={[4,4,0,0]} maxBarSize={40} />
-            <Bar dataKey="saidas" name="Saidas" fill="#E8A0B8" radius={[4,4,0,0]} maxBarSize={40} />
+            <Bar dataKey="entradas" name="Entradas" fill="#87CEEB" radius={[4,4,0,0]} maxBarSize={mode === 'anual' ? 22 : 12} />
+            <Bar dataKey="saidas" name="Saidas" fill="#E8A0B8" radius={[0,0,4,4]} maxBarSize={mode === 'anual' ? 22 : 12} />
             <Line
               type="monotone"
               dataKey="acumulado"
