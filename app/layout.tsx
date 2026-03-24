@@ -20,7 +20,8 @@ export default function RootLayout({
       <body className={`${inter.className} min-h-screen`} style={{ backgroundColor: '#F4F3FF' }}>
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 ml-64 p-8 min-h-screen">
+          {/* Offset da sidebar no desktop + padding bottom no mobile para o bottom nav */}
+          <main className="flex-1 md:ml-64 p-4 md:p-8 pb-24 md:pb-8 min-h-screen">
             {children}
           </main>
         </div>

@@ -12,3 +12,8 @@ body {
   background-color: #F4F3FF;
   color: #1a1a2e;
 }
+
+/* Safe area para iPhone com notch/Dynamic Island */
+.pb-safe {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
