@@ -11,6 +11,8 @@ export interface ContaPagar {
   status: StatusPagar
   pago_em: string | null
   observacoes: string | null
+  comprovante_url: string | null
+  comprovante_nome: string | null
   created_at: string
   updated_at: string
 }
@@ -30,11 +32,12 @@ export interface ContaReceber {
 
 export const CATEGORIAS_PAGAR = [
   'aluguel',
-  'utilidades',
+  'energia',
+  'agua',
   'manutencao',
-  'insumos',
-  'servicos',
-  'taxas',
+  'fornecedor',
+  'contador',
+  'marketing',
   'outros',
 ] as const
 

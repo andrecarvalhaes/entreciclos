@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TrendingDown, TrendingUp, DollarSign, CalendarCheck } from 'lucide-react'
 import Link from 'next/link'
+import FluxoCaixa from './components/FluxoCaixa'
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
@@ -211,6 +212,9 @@ export default function DashboardClient() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Fluxo de Caixa */}
+      <FluxoCaixa />
     </div>
   )
 }

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { uploadComprovante, analisarComprovante } from '@/lib/storage'
 import { ContaPagar, CATEGORIAS_PAGAR } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -21,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, CheckCircle, Filter } from 'lucide-react'
+import Image from "next/image"
+import { Plus, CheckCircle, Filter, Paperclip, Upload, Loader2, Sparkles, ExternalLink } from 'lucide-react'
 
 const STATUS_LABELS: Record<string, string> = {
   pendente: 'Pendente',
@@ -31,11 +33,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 const CATEGORIA_LABELS: Record<string, string> = {
   aluguel: 'Aluguel',
-  utilidades: 'Utilidades',
+  energia: 'Energia',
+  agua: 'Agua',
   manutencao: 'Manutencao',
-  insumos: 'Insumos',
-  servicos: 'Servicos',
-  taxas: 'Taxas',
+  fornecedor: 'Fornecedor',
+  contador: 'Contador',
+  marketing: 'Marketing',
   outros: 'Outros',
 }
 
@@ -80,6 +83,13 @@ export default function ContasPagarClient() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<NovaContaForm>(defaultForm)
   const [saving, setSaving] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Anexar comprovante em conta existente
+  const [attachingId, setAttachingId] = useState<string | null>(null)
+  const attachInputRef = useRef<HTMLInputElement>(null)
 
   const fetchContas = useCallback(async () => {
     setLoading(true)
@@ -98,9 +108,7 @@ export default function ContasPagarClient() {
     setLoading(false)
   }, [filterStatus, filterCategoria, filterPeriodFrom, filterPeriodTo])
 
-  useEffect(() => {
-    fetchContas()
-  }, [fetchContas])
+  useEffect(() => { fetchContas() }, [fetchContas])
 
   const handleMarkAsPaid = async (id: string) => {
     await supabase
@@ -110,11 +118,37 @@ export default function ContasPagarClient() {
     fetchContas()
   }
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setFile(f)
+    if (f.type.startsWith('image/')) {
+      setFilePreview(URL.createObjectURL(f))
+    } else {
+      setFilePreview(null)
+    }
+    // Analisar com IA automaticamente
+    setAnalyzing(true)
+    const resultado = await analisarComprovante(f)
+    setAnalyzing(false)
+    if (resultado) {
+      setForm(prev => ({
+        ...prev,
+        descricao: resultado.descricao || prev.descricao,
+        fornecedor: resultado.fornecedor || prev.fornecedor,
+        valor: resultado.valor ? String(resultado.valor) : prev.valor,
+        categoria: resultado.categoria || prev.categoria,
+        vencimento: resultado.data || prev.vencimento,
+      }))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.descricao || !form.valor || !form.vencimento) return
     setSaving(true)
-    await supabase.from('contas_pagar').insert({
+
+    const { data: inserted } = await supabase.from('contas_pagar').insert({
       descricao: form.descricao,
       categoria: form.categoria,
       fornecedor: form.fornecedor || null,
@@ -122,11 +156,37 @@ export default function ContasPagarClient() {
       vencimento: form.vencimento,
       observacoes: form.observacoes || null,
       status: 'pendente',
-    })
+    }).select().single()
+
+    // Upload comprovante se houver
+    if (file && inserted?.id) {
+      const url = await uploadComprovante(file, inserted.id)
+      if (url) {
+        await supabase.from('contas_pagar').update({
+          comprovante_url: url,
+          comprovante_nome: file.name,
+        }).eq('id', inserted.id)
+      }
+    }
+
     setSaving(false)
     setModalOpen(false)
     setForm(defaultForm)
+    setFile(null)
+    setFilePreview(null)
     fetchContas()
+  }
+
+  const handleAttachToExisting = async (contaId: string, f: File) => {
+    const url = await uploadComprovante(f, contaId)
+    if (url) {
+      await supabase.from('contas_pagar').update({
+        comprovante_url: url,
+        comprovante_nome: f.name,
+      }).eq('id', contaId)
+      fetchContas()
+    }
+    setAttachingId(null)
   }
 
   const total = contas.reduce((sum, c) => sum + Number(c.valor), 0)
@@ -137,9 +197,13 @@ export default function ContasPagarClient() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">Contas a Pagar</h2>
-          <p className="text-gray-500 text-sm mt-1">Gerencie suas obrigacoes financeiras</p>
+          <p className="text-gray-500 text-sm mt-1">Gerencie suas despesas</p>
         </div>
-        <Button onClick={() => setModalOpen(true)} className="bg-[#2D2566] hover:bg-[#3D3480] text-white">
+        <Button
+          onClick={() => setModalOpen(true)}
+          className="text-white"
+          style={{ backgroundColor: '#2D2566' }}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nova Conta
         </Button>
@@ -165,7 +229,7 @@ export default function ContasPagarClient() {
           </Select>
 
           <Select value={filterCategoria} onValueChange={(v) => setFilterCategoria(v ?? "todos")}>
-            <SelectTrigger className="w-36 h-8 text-sm">
+            <SelectTrigger className="w-40 h-8 text-sm">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
@@ -178,33 +242,14 @@ export default function ContasPagarClient() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">De</span>
-            <Input
-              type="date"
-              value={filterPeriodFrom}
-              onChange={e => setFilterPeriodFrom(e.target.value)}
-              className="w-36 h-8 text-sm"
-            />
+            <Input type="date" value={filterPeriodFrom} onChange={e => setFilterPeriodFrom(e.target.value)} className="w-36 h-8 text-sm" />
             <span className="text-xs text-gray-500">ate</span>
-            <Input
-              type="date"
-              value={filterPeriodTo}
-              onChange={e => setFilterPeriodTo(e.target.value)}
-              className="w-36 h-8 text-sm"
-            />
+            <Input type="date" value={filterPeriodTo} onChange={e => setFilterPeriodTo(e.target.value)} className="w-36 h-8 text-sm" />
           </div>
 
           {(filterStatus !== 'todos' || filterCategoria !== 'todos' || filterPeriodFrom || filterPeriodTo) && (
-            <Button
-              variant="ghost"
-              className="h-8 px-3 text-xs text-gray-500"
-              onClick={() => {
-                setFilterStatus('todos')
-                setFilterCategoria('todos')
-                setFilterPeriodFrom('')
-                setFilterPeriodTo('')
-              }}
-            >
-              Limpar filtros
+            <Button variant="ghost" className="h-8 px-3 text-xs text-gray-500" onClick={() => { setFilterStatus('todos'); setFilterCategoria('todos'); setFilterPeriodFrom(''); setFilterPeriodTo('') }}>
+              Limpar
             </Button>
           )}
         </div>
@@ -222,11 +267,10 @@ export default function ContasPagarClient() {
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Descricao</th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Categoria</th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Fornecedor</th>
                 <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Valor</th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Vencimento</th>
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Acao</th>
+                <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Acoes</th>
               </tr>
             </thead>
             <tbody>
@@ -234,13 +278,10 @@ export default function ContasPagarClient() {
                 <tr key={conta.id} className={idx !== contas.length - 1 ? 'border-b border-gray-100' : ''}>
                   <td className="px-5 py-3.5">
                     <p className="text-sm font-medium text-gray-900">{conta.descricao}</p>
-                    {conta.observacoes && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">{conta.observacoes}</p>}
+                    {conta.fornecedor && <p className="text-xs text-gray-400 mt-0.5">{conta.fornecedor}</p>}
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm text-gray-600">{CATEGORIA_LABELS[conta.categoria] || conta.categoria}</span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="text-sm text-gray-600">{conta.fornecedor || '—'}</span>
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <span className="text-sm font-semibold text-gray-900">{formatCurrency(Number(conta.valor))}</span>
@@ -251,16 +292,53 @@ export default function ContasPagarClient() {
                   <td className="px-5 py-3.5">
                     <StatusBadge status={conta.status} />
                   </td>
-                  <td className="px-5 py-3.5 text-right">
-                    {conta.status !== 'pago' && (
-                      <button
-                        onClick={() => handleMarkAsPaid(conta.id)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-900 transition-colors"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Marcar pago
-                      </button>
-                    )}
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center justify-end gap-3">
+                      {/* Comprovante anexado */}
+                      {(conta as ContaPagar).comprovante_url && (
+                        <a
+                          href={(conta as ContaPagar).comprovante_url ?? "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Comprovante
+                        </a>
+                      )}
+                      {/* Anexar comprovante */}
+                      {!(conta as ContaPagar).comprovante_url && (
+                        <>
+                          <button
+                            onClick={() => { setAttachingId(conta.id); attachInputRef.current?.click() }}
+                            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+                          >
+                            <Paperclip className="w-3.5 h-3.5" />
+                            Anexar
+                          </button>
+                          <input
+                            ref={attachInputRef}
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={e => {
+                              const f = e.target.files?.[0]
+                              if (f && attachingId) handleAttachToExisting(attachingId, f)
+                            }}
+                          />
+                        </>
+                      )}
+                      {/* Marcar como pago */}
+                      {conta.status !== 'pago' && (
+                        <button
+                          onClick={() => handleMarkAsPaid(conta.id)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-900 transition-colors"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Marcar pago
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -268,42 +346,75 @@ export default function ContasPagarClient() {
           </table>
         )}
 
-        {/* Total footer */}
         {contas.length > 0 && (
           <div className="border-t border-gray-100 px-5 py-3 bg-gray-50 flex items-center justify-between">
             <span className="text-xs text-gray-500">{contas.length} {contas.length === 1 ? 'registro' : 'registros'}</span>
-            <span className="text-sm font-semibold text-gray-900">
-              Total: {formatCurrency(total)}
-            </span>
+            <span className="text-sm font-semibold text-gray-900">Total: {formatCurrency(total)}</span>
           </div>
         )}
       </div>
 
       {/* Modal Nova Conta */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={modalOpen} onOpenChange={open => { setModalOpen(open); if (!open) { setFile(null); setFilePreview(null); setForm(defaultForm) } }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nova Conta a Pagar</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+
+            {/* Upload comprovante com IA */}
+            <div className="space-y-2">
+              <Label>Comprovante (opcional)</Label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 transition-colors text-center"
+              >
+                {analyzing ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> IA analisando...
+                    </span>
+                  </div>
+                ) : filePreview ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Image src={filePreview} className="max-h-32 rounded-lg object-contain mx-auto" alt="preview" width={200} height={128} />
+                    <span className="text-xs text-gray-400">{file?.name}</span>
+                    <span className="text-xs text-green-600 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Campos preenchidos pela IA</span>
+                  </div>
+                ) : file ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <Paperclip className="w-5 h-5 text-gray-400" />
+                    <span className="text-xs text-gray-600">{file.name}</span>
+                    <span className="text-xs text-green-600 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Campos preenchidos pela IA</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <Upload className="w-5 h-5 text-gray-300" />
+                    <span className="text-xs text-gray-400">Clique para anexar foto ou PDF</span>
+                    <span className="text-xs text-gray-300 flex items-center gap-1"><Sparkles className="w-3 h-3" /> IA vai preencher os campos automaticamente</span>
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="descricao">Descricao *</Label>
-              <Input
-                id="descricao"
-                value={form.descricao}
-                onChange={e => setForm({ ...form, descricao: e.target.value })}
-                placeholder="Ex: Aluguel do espaco"
-                required
-              />
+              <Input id="descricao" value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} placeholder="Ex: Conta de energia" required />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Categoria *</Label>
-                <Select value={form.categoria} onValueChange={(v) => setForm({ ...form, categoria: v ?? "outros" })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={form.categoria} onValueChange={v => setForm({ ...form, categoria: v ?? "outros" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CATEGORIAS_PAGAR.map(c => (
                       <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c] || c}</SelectItem>
@@ -311,60 +422,31 @@ export default function ContasPagarClient() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-1.5">
-                <Label htmlFor="valor">Valor (R$) *</Label>
-                <Input
-                  id="valor"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.valor}
-                  onChange={e => setForm({ ...form, valor: e.target.value })}
-                  placeholder="0,00"
-                  required
-                />
+                <Label htmlFor="fornecedor">Fornecedor</Label>
+                <Input id="fornecedor" value={form.fornecedor} onChange={e => setForm({ ...form, fornecedor: e.target.value })} placeholder="Nome" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="fornecedor">Fornecedor</Label>
-                <Input
-                  id="fornecedor"
-                  value={form.fornecedor}
-                  onChange={e => setForm({ ...form, fornecedor: e.target.value })}
-                  placeholder="Nome do fornecedor"
-                />
+                <Label htmlFor="valor">Valor (R$) *</Label>
+                <Input id="valor" type="number" step="0.01" min="0" value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} placeholder="0,00" required />
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="vencimento">Vencimento *</Label>
-                <Input
-                  id="vencimento"
-                  type="date"
-                  value={form.vencimento}
-                  onChange={e => setForm({ ...form, vencimento: e.target.value })}
-                  required
-                />
+                <Input id="vencimento" type="date" value={form.vencimento} onChange={e => setForm({ ...form, vencimento: e.target.value })} required />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="observacoes">Observacoes</Label>
-              <Input
-                id="observacoes"
-                value={form.observacoes}
-                onChange={e => setForm({ ...form, observacoes: e.target.value })}
-                placeholder="Observacoes opcionais"
-              />
+              <Input id="observacoes" value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Opcional" />
             </div>
 
             <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={saving} className="bg-[#2D2566] hover:bg-[#3D3480] text-white">
+              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving || analyzing} className="text-white" style={{ backgroundColor: '#2D2566' }}>
                 {saving ? 'Salvando...' : 'Salvar'}
               </Button>
             </DialogFooter>
