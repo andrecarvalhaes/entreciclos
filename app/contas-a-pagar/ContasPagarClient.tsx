@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import Image from "next/image"
 import { Plus, CheckCircle, Filter, Paperclip, Upload, Loader2, Sparkles, ExternalLink } from 'lucide-react'
+import PageHeader from '@/components/PageHeader'
 
 const STATUS_LABELS: Record<string, string> = {
   pendente: 'Pendente',
@@ -280,31 +281,33 @@ export default function ContasPagarClient() {
 
   const total = contas.reduce((sum, c) => sum + Number(c.valor), 0)
 
+  const mobileAddBtn = (
+    <Button onClick={() => setModalOpen(true)} size="sm" className="h-8 px-3 text-xs font-medium"
+      style={{ backgroundColor: '#E8A0B8', color: '#2D2566' }}>
+      <Plus className="w-3.5 h-3.5 mr-1" /> Nova
+    </Button>
+  )
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Contas a Pagar</h2>
-          <p className="text-gray-500 text-sm mt-1">Gerencie suas despesas</p>
-        </div>
-        <Button
-          onClick={() => setModalOpen(true)}
-          className="text-white"
-          style={{ backgroundColor: '#2D2566' }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Conta
+    <div className="space-y-4">
+      <PageHeader title="Contas a Pagar" subtitle="Gerencie suas despesas" action={mobileAddBtn} />
+
+      {/* Desktop: botão separado */}
+      <div className="hidden md:flex items-center justify-end -mt-2">
+        <Button onClick={() => setModalOpen(true)} className="text-white" style={{ backgroundColor: '#2D2566' }}>
+          <Plus className="w-4 h-4 mr-2" /> Nova Conta
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-gray-400" />
-          <span className="text-sm font-medium text-gray-700">Filtros</span>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <button className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700">
+          <span className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-400" />
+            Filtros
+          </span>
+        </button>
+        <div className="px-4 pb-4 flex flex-wrap gap-3 border-t border-gray-50 pt-3">
           <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? "todos")}>
             <SelectTrigger className="w-36 h-8 text-sm">
               <SelectValue placeholder="Status" />
@@ -349,14 +352,54 @@ export default function ContasPagarClient() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+
+      {/* Lista */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">Carregando...</div>
         ) : contas.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">Nenhuma conta encontrada</div>
         ) : (
-          <table className="w-full">
+          <>
+            {/* Mobile: cards */}
+            <div className="md:hidden divide-y divide-gray-50">
+              {contas.map(conta => (
+                <div key={conta.id} className="p-4">
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="text-sm font-medium text-gray-900">{conta.descricao}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{CATEGORIA_LABELS[conta.categoria] || conta.categoria} · {formatDate(conta.vencimento)}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 flex-shrink-0">{formatCurrency(Number(conta.valor))}</p>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <StatusBadge status={conta.status} />
+                    <div className="flex items-center gap-3">
+                      {conta.comprovante_url ? (
+                        <a href={conta.comprovante_url} target="_blank" rel="noreferrer"
+                          className="text-xs text-gray-400 flex items-center gap-1">
+                          <ExternalLink className="w-3 h-3" /> Comprovante
+                        </a>
+                      ) : (
+                        <button onClick={() => { setAttachingId(conta.id); attachInputRef.current?.click() }}
+                          className="text-xs text-gray-400 flex items-center gap-1">
+                          <Paperclip className="w-3 h-3" /> Anexar
+                        </button>
+                      )}
+                      {conta.status !== 'pago' && (
+                        <button onClick={() => handleMarkAsPaid(conta.id)}
+                          className="text-xs font-medium text-green-700 flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5" /> Pago
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: tabela */}
+          <table className="hidden md:table w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Descricao</th>
@@ -438,6 +481,7 @@ export default function ContasPagarClient() {
               ))}
             </tbody>
           </table>
+          </>
         )}
 
         {contas.length > 0 && (
@@ -609,7 +653,6 @@ export default function ContasPagarClient() {
                 Serao criados <strong>{form.recorrencia_parcelas} lancamentos</strong> a cada <strong>{form.recorrencia_meses} {parseInt(form.recorrencia_meses) === 1 ? 'mes' : 'meses'}</strong>, todo dia <strong>{form.recorrencia_dia}</strong>, a partir do mes atual.
               </div>
             )}
-
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
