@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Entreciclos — Sistema Financeiro
 
-## Getting Started
+Sistema financeiro interno da Lavanderia Entreciclos (Guarapari, ES).
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js 15** + TypeScript + Tailwind CSS
+- **Supabase** — banco de dados PostgreSQL
+- **Shadcn/ui** — componentes
+- **Lucide React** — ícones
+
+## Módulos
+
+### Dashboard (`/`)
+- KPIs: Total a Receber, Total a Pagar, Saldo Projetado, Receita do Mês
+- Próximas 5 contas a pagar e a receber
+
+### Contas a Pagar (`/contas-a-pagar`)
+- Listagem com filtros por status, categoria e período
+- Ação de marcar como pago
+- Cadastro de nova conta via modal
+
+### Contas a Receber (`/contas-a-receber`)
+- Listagem com filtros por status e período
+- Ação de marcar como recebido
+- Cadastro de nova conta via modal
+
+## Configuração
+
+### Variáveis de ambiente
+
+Crie um arquivo `.env.local` na raiz do projeto:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Banco de dados
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Execute o SQL abaixo no Supabase SQL Editor:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sql
+CREATE TABLE IF NOT EXISTS contas_pagar (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  descricao TEXT NOT NULL,
+  categoria TEXT NOT NULL DEFAULT 'outros',
+  fornecedor TEXT,
+  valor NUMERIC(10,2) NOT NULL,
+  vencimento DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pendente',
+  pago_em TIMESTAMPTZ,
+  observacoes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-## Learn More
+CREATE TABLE IF NOT EXISTS contas_receber (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  descricao TEXT NOT NULL,
+  origem TEXT NOT NULL DEFAULT 'maquina',
+  valor NUMERIC(10,2) NOT NULL,
+  data_prevista DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pendente',
+  recebido_em TIMESTAMPTZ,
+  observacoes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Desenvolvimento local
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Acesse [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+npm start
+```

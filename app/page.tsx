@@ -1,103 +1,214 @@
-import Image from "next/image";
+import { supabase } from '@/lib/supabase'
+import { ContaPagar, ContaReceber } from '@/lib/types'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default function Home() {
+import { TrendingDown, TrendingUp, DollarSign, CalendarCheck } from 'lucide-react'
+import Link from 'next/link'
+
+async function getDashboardData() {
+  const today = new Date().toISOString().split('T')[0]
+  const firstDayOfMonth = today.substring(0, 8) + '01'
+
+  const [pagarResult, receberResult] = await Promise.all([
+    supabase
+      .from('contas_pagar')
+      .select('*')
+      .order('vencimento', { ascending: true }),
+    supabase
+      .from('contas_receber')
+      .select('*')
+      .order('data_prevista', { ascending: true }),
+  ])
+
+  const contasPagar: ContaPagar[] = pagarResult.data || []
+  const contasReceber: ContaReceber[] = receberResult.data || []
+
+  const totalAPagar = contasPagar
+    .filter(c => c.status === 'pendente' || c.status === 'vencido')
+    .reduce((sum, c) => sum + Number(c.valor), 0)
+
+  const totalAReceber = contasReceber
+    .filter(c => c.status === 'pendente' || c.status === 'atrasado')
+    .reduce((sum, c) => sum + Number(c.valor), 0)
+
+  const receitaMes = contasReceber
+    .filter(c => c.status === 'recebido' && c.recebido_em && c.recebido_em >= firstDayOfMonth)
+    .reduce((sum, c) => sum + Number(c.valor), 0)
+
+  const saldoProjetado = totalAReceber - totalAPagar
+
+  const proximasPagar = contasPagar
+    .filter(c => c.status === 'pendente' || c.status === 'vencido')
+    .slice(0, 5)
+
+  const proximasReceber = contasReceber
+    .filter(c => c.status === 'pendente' || c.status === 'atrasado')
+    .slice(0, 5)
+
+  return {
+    totalAPagar,
+    totalAReceber,
+    saldoProjetado,
+    receitaMes,
+    proximasPagar,
+    proximasReceber,
+  }
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    pendente: { label: 'Pendente', className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+    pago: { label: 'Pago', className: 'bg-green-50 text-green-700 border-green-200' },
+    vencido: { label: 'Vencido', className: 'bg-red-50 text-red-700 border-red-200' },
+    recebido: { label: 'Recebido', className: 'bg-green-50 text-green-700 border-green-200' },
+    atrasado: { label: 'Atrasado', className: 'bg-red-50 text-red-700 border-red-200' },
+  }
+  const config = map[status] || { label: status, className: '' }
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${config.className}`}>
+      {config.label}
+    </span>
+  )
+}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+export default async function Dashboard() {
+  const data = await getDashboardData()
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-semibold text-gray-900">Dashboard</h2>
+        <p className="text-gray-500 text-sm mt-1">Visão geral do financeiro</p>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-500">Total a Receber</span>
+              <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-green-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-semibold text-gray-900">{formatCurrency(data.totalAReceber)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-500">Total a Pagar</span>
+              <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
+                <TrendingDown className="w-4 h-4 text-red-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-semibold text-gray-900">{formatCurrency(data.totalAPagar)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-500">Saldo Projetado</span>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${data.saldoProjetado >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                <DollarSign className={`w-4 h-4 ${data.saldoProjetado >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+              </div>
+            </div>
+            <p className={`text-2xl font-semibold ${data.saldoProjetado >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+              {formatCurrency(data.saldoProjetado)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-500">Receita do Mes</span>
+              <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+                <CalendarCheck className="w-4 h-4 text-purple-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-semibold text-gray-900">{formatCurrency(data.receitaMes)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tables */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Proximas a Pagar */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-gray-900">Proximas a Pagar</CardTitle>
+              <Link href="/contas-a-pagar" className="text-xs text-blue-600 hover:underline font-medium">
+                Ver todas
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {data.proximasPagar.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">Nenhuma conta pendente</p>
+            ) : (
+              <table className="w-full">
+                <tbody>
+                  {data.proximasPagar.map((conta, idx) => (
+                    <tr key={conta.id} className={idx !== data.proximasPagar.length - 1 ? 'border-b border-gray-100' : ''}>
+                      <td className="px-5 py-3">
+                        <p className="text-sm font-medium text-gray-900 truncate max-w-[160px]">{conta.descricao}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(conta.vencimento)}</p>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <p className="text-sm font-semibold text-gray-900">{formatCurrency(Number(conta.valor))}</p>
+                        <div className="flex justify-end mt-0.5">
+                          <StatusBadge status={conta.status} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Proximas a Receber */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-gray-900">Proximas a Receber</CardTitle>
+              <Link href="/contas-a-receber" className="text-xs text-blue-600 hover:underline font-medium">
+                Ver todas
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {data.proximasReceber.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">Nenhuma conta pendente</p>
+            ) : (
+              <table className="w-full">
+                <tbody>
+                  {data.proximasReceber.map((conta, idx) => (
+                    <tr key={conta.id} className={idx !== data.proximasReceber.length - 1 ? 'border-b border-gray-100' : ''}>
+                      <td className="px-5 py-3">
+                        <p className="text-sm font-medium text-gray-900 truncate max-w-[160px]">{conta.descricao}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(conta.data_prevista)}</p>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <p className="text-sm font-semibold text-gray-900">{formatCurrency(Number(conta.valor))}</p>
+                        <div className="flex justify-end mt-0.5">
+                          <StatusBadge status={conta.status} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  );
+  )
 }
