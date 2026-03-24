@@ -6,8 +6,8 @@ import Sidebar from "@/components/Sidebar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Entreciclos — Sistema Financeiro",
-  description: "Controle financeiro da Lavanderia Entreciclos",
+  title: "Entre Ciclos — Sistema Financeiro",
+  description: "Controle financeiro da Lavanderia Entre Ciclos",
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
+      <body className={`${inter.className} min-h-screen`} style={{ backgroundColor: '#F4F3FF' }}>
         <div className="flex min-h-screen">
           <Sidebar />
           <main className="flex-1 ml-64 p-8 min-h-screen">

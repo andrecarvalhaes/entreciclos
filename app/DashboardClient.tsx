@@ -88,53 +88,53 @@ export default function DashboardClient() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm" style={{ backgroundColor: '#2D2566' }}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-500">Total a Receber</span>
-              <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-green-600" />
+              <span className="text-sm font-medium text-white/60">Total a Receber</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(135,206,235,0.2)' }}>
+                <TrendingUp className="w-4 h-4" style={{ color: '#87CEEB' }} />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-gray-900">{formatCurrency(totalAReceber)}</p>
+            <p className="text-2xl font-semibold text-white">{formatCurrency(totalAReceber)}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm" style={{ backgroundColor: '#2D2566' }}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-500">Total a Pagar</span>
-              <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
-                <TrendingDown className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-medium text-white/60">Total a Pagar</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(232,160,184,0.2)' }}>
+                <TrendingDown className="w-4 h-4" style={{ color: '#E8A0B8' }} />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-gray-900">{formatCurrency(totalAPagar)}</p>
+            <p className="text-2xl font-semibold text-white">{formatCurrency(totalAPagar)}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm" style={{ backgroundColor: '#2D2566' }}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-500">Saldo Projetado</span>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${saldoProjetado >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                <DollarSign className={`w-4 h-4 ${saldoProjetado >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+              <span className="text-sm font-medium text-white/60">Saldo Projetado</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                <DollarSign className="w-4 h-4 text-white/80" />
               </div>
             </div>
-            <p className={`text-2xl font-semibold ${saldoProjetado >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+            <p className={`text-2xl font-semibold ${saldoProjetado >= 0 ? 'text-white' : 'text-red-300'}`}>
               {formatCurrency(saldoProjetado)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm" style={{ backgroundColor: '#2D2566' }}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-500">Receita do Mes</span>
-              <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
-                <CalendarCheck className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-medium text-white/60">Receita do Mes</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(135,206,235,0.2)' }}>
+                <CalendarCheck className="w-4 h-4" style={{ color: '#87CEEB' }} />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-gray-900">{formatCurrency(receitaMes)}</p>
+            <p className="text-2xl font-semibold text-white">{formatCurrency(receitaMes)}</p>
           </CardContent>
         </Card>
       </div>
@@ -145,7 +145,7 @@ export default function DashboardClient() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold text-gray-900">Proximas a Pagar</CardTitle>
-              <Link href="/contas-a-pagar" className="text-xs text-blue-600 hover:underline font-medium">
+              <Link href="/contas-a-pagar" className="text-xs font-medium" style={{color:"#E8A0B8"}}>
                 Ver todas
               </Link>
             </div>
@@ -180,7 +180,7 @@ export default function DashboardClient() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold text-gray-900">Proximas a Receber</CardTitle>
-              <Link href="/contas-a-receber" className="text-xs text-blue-600 hover:underline font-medium">
+              <Link href="/contas-a-receber" className="text-xs font-medium" style={{color:"#E8A0B8"}}>
                 Ver todas
               </Link>
             </div>

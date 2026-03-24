@@ -2,71 +2,75 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, TrendingDown, TrendingUp, Waves } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import Image from 'next/image'
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
 
 const navItems = [
-  {
-    href: '/',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    href: '/contas-a-pagar',
-    label: 'Contas a Pagar',
-    icon: TrendingDown,
-  },
-  {
-    href: '/contas-a-receber',
-    label: 'Contas a Receber',
-    icon: TrendingUp,
-  },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/contas-a-pagar', label: 'Contas a Pagar', icon: ArrowDownCircle },
+  { href: '/contas-a-receber', label: 'Contas a Receber', icon: ArrowUpCircle },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-10">
+    <aside
+      className="fixed top-0 left-0 h-screen w-64 flex flex-col"
+      style={{ backgroundColor: '#2D2566' }}
+    >
       {/* Logo */}
-      <div className="p-6 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Waves className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h1 className="font-semibold text-gray-900 text-sm leading-none">Entreciclos</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Sistema Financeiro</p>
-          </div>
-        </div>
+      <div className="flex flex-col items-center px-6 py-8 border-b border-white/10">
+        <Image
+          src="/logo.png"
+          alt="Entre Ciclos Lavanderia"
+          width={100}
+          height={100}
+          className="rounded-xl mb-3"
+          priority
+        />
+        <p className="text-white/50 text-xs font-medium tracking-widest uppercase">
+          Sistema Financeiro
+        </p>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
+      {/* Nav */}
+      <nav className="flex-1 px-4 py-6 space-y-1">
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              key={href}
+              href={href}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+              style={
                 isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              )}
+                  ? { backgroundColor: '#E8A0B8', color: '#2D2566' }
+                  : { color: 'rgba(255,255,255,0.7)' }
+              }
+              onMouseEnter={e => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.08)'
+                  ;(e.currentTarget as HTMLAnchorElement).style.color = '#fff'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent'
+                  ;(e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'
+                }
+              }}
             >
-              <Icon className={cn('w-4 h-4', isActive ? 'text-blue-600' : 'text-gray-400')} />
-              {item.label}
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {label}
             </Link>
           )
         })}
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-100">
-        <p className="text-xs text-gray-400 text-center">Guarapari, ES</p>
+      <div className="px-6 py-4 border-t border-white/10">
+        <p className="text-white/30 text-xs text-center">Entre Ciclos &copy; {new Date().getFullYear()}</p>
       </div>
     </aside>
   )

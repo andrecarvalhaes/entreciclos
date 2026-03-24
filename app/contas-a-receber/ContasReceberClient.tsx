@@ -130,7 +130,7 @@ export default function ContasReceberClient() {
           <h2 className="text-2xl font-semibold text-gray-900">Contas a Receber</h2>
           <p className="text-gray-500 text-sm mt-1">Gerencie suas receitas previstas</p>
         </div>
-        <Button onClick={() => setModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={() => setModalOpen(true)} className="bg-[#2D2566] hover:bg-[#3D3480] text-white">
           <Plus className="w-4 h-4 mr-2" />
           Nova Conta
         </Button>
@@ -326,7 +326,7 @@ export default function ContasReceberClient() {
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button type="submit" disabled={saving} className="bg-[#2D2566] hover:bg-[#3D3480] text-white">
                 {saving ? 'Salvando...' : 'Salvar'}
               </Button>
             </DialogFooter>
