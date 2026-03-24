@@ -18,7 +18,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -32,15 +34,48 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const CATEGORIA_LABELS: Record<string, string> = {
+  // Custos Operacionais
+  insumos: 'Insumos / Produtos',
+  manutencao_equipamentos: 'Manutencao — Equipamentos',
+  manutencao_predial: 'Manutencao — Predial',
+  // Despesas Operacionais
   aluguel: 'Aluguel',
-  energia: 'Energia',
-  agua: 'Agua',
-  manutencao: 'Manutencao',
-  fornecedor: 'Fornecedor',
+  energia: 'Energia Eletrica',
+  agua: 'Agua / Esgoto',
+  internet_telefone: 'Internet / Telefone',
+  // Administrativas
   contador: 'Contador',
-  marketing: 'Marketing',
+  juridico: 'Juridico',
+  softwares: 'Softwares / Assinaturas',
+  material_escritorio: 'Material de Escritorio',
+  // Pessoal
+  folha_pagamento: 'Folha de Pagamento',
+  pro_labore: 'Pro Labore',
+  beneficios: 'Beneficios',
+  // Financeiras
+  parcela_financiamento: 'Parcela de Financiamento',
+  tarifas_bancarias: 'Tarifas Bancarias',
+  juros: 'Juros / Multas',
+  // Marketing
+  marketing: 'Marketing Digital',
+  publicidade: 'Publicidade / Impressos',
+  // Impostos
+  imposto: 'Impostos (DAS / IRPJ)',
+  alvara_licenca: 'Alvara / Licenca',
+  // Outros
   outros: 'Outros',
 }
+
+const CATEGORIA_GRUPOS: { label: string; items: string[] }[] = [
+  { label: 'Custos Operacionais', items: ['insumos','manutencao_equipamentos','manutencao_predial'] },
+  { label: 'Despesas Operacionais', items: ['aluguel','energia','agua','internet_telefone'] },
+  { label: 'Administrativas', items: ['contador','juridico','softwares','material_escritorio'] },
+  { label: 'Pessoal', items: ['folha_pagamento','pro_labore','beneficios'] },
+  { label: 'Financeiras', items: ['parcela_financiamento','tarifas_bancarias','juros'] },
+  { label: 'Marketing & Vendas', items: ['marketing','publicidade'] },
+  { label: 'Impostos & Taxas', items: ['imposto','alvara_licenca'] },
+  { label: 'Outros', items: ['outros'] },
+]
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -288,8 +323,13 @@ export default function ContasPagarClient() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todas</SelectItem>
-              {CATEGORIAS_PAGAR.map(c => (
-                <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c] || c}</SelectItem>
+              {CATEGORIA_GRUPOS.map(grupo => (
+                <SelectGroup key={grupo.label}>
+                  <SelectLabel>{grupo.label}</SelectLabel>
+                  {grupo.items.map(c => (
+                    <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c] || c}</SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>
@@ -470,8 +510,13 @@ export default function ContasPagarClient() {
                 <Select value={form.categoria} onValueChange={v => setForm({ ...form, categoria: v ?? "outros" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CATEGORIAS_PAGAR.map(c => (
-                      <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c] || c}</SelectItem>
+                    {CATEGORIA_GRUPOS.map(grupo => (
+                      <SelectGroup key={grupo.label}>
+                        <SelectLabel>{grupo.label}</SelectLabel>
+                        {grupo.items.map(c => (
+                          <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c] || c}</SelectItem>
+                        ))}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>

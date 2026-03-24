@@ -31,13 +31,35 @@ export interface ContaReceber {
 }
 
 export const CATEGORIAS_PAGAR = [
+  // Custos Operacionais (CMV / CPV)
+  'insumos',
+  'manutencao_equipamentos',
+  'manutencao_predial',
+  // Despesas Operacionais
   'aluguel',
   'energia',
   'agua',
-  'manutencao',
-  'fornecedor',
+  'internet_telefone',
+  // Despesas Administrativas
   'contador',
+  'juridico',
+  'softwares',
+  'material_escritorio',
+  // Despesas com Pessoal
+  'folha_pagamento',
+  'pro_labore',
+  'beneficios',
+  // Despesas Financeiras
+  'parcela_financiamento',
+  'tarifas_bancarias',
+  'juros',
+  // Marketing & Vendas
   'marketing',
+  'publicidade',
+  // Impostos & Taxas
+  'imposto',
+  'alvara_licenca',
+  // Outros
   'outros',
 ] as const
 
