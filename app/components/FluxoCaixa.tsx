@@ -37,7 +37,7 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
         <div key={p.name} className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
           <span className="text-gray-500">{p.name}:</span>
-          <span className="font-medium text-gray-900">{formatCurrency(p.value)}</span>
+          <span className="font-medium text-gray-900">{formatCurrency(Math.abs(p.value))}</span>
         </div>
       ))}
     </div>
@@ -78,7 +78,7 @@ export default function FluxoCaixa() {
             .filter(c => c.data_prevista === key)
             .reduce((s, c) => s + Number(c.valor), 0)
           acc += entradas - saidas
-          pontos.push({ label: `${d}`, entradas, saidas, acumulado: acc })
+          pontos.push({ label: `${d}`, entradas, saidas: -saidas, acumulado: acc })
         }
         setData(pontos)
       } else {
@@ -103,7 +103,7 @@ export default function FluxoCaixa() {
             .filter(c => c.data_prevista?.startsWith(`${year}-${monthStr}`))
             .reduce((s, c) => s + Number(c.valor), 0)
           acc += entradas - saidas
-          pontos.push({ label: MESES[m], entradas, saidas, acumulado: acc })
+          pontos.push({ label: MESES[m], entradas, saidas: -saidas, acumulado: acc })
         }
         setData(pontos)
       }
