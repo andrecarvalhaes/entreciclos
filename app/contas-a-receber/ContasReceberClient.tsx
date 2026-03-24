@@ -13,7 +13,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { Plus, CheckCircle, Filter } from 'lucide-react'
+import { Plus, CheckCircle, Filter, Pencil } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -61,6 +61,19 @@ export default function ContasReceberClient() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<NovaContaForm>(defaultForm)
   const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  const openEdit = (conta: ContaReceber) => {
+    setEditingId(conta.id)
+    setForm({
+      descricao: conta.descricao,
+      origem: conta.origem,
+      valor: String(conta.valor),
+      data_prevista: conta.data_prevista,
+      observacoes: conta.observacoes || '',
+    })
+    setModalOpen(true)
+  }
 
   const fetchContas = useCallback(async () => {
     setLoading(true)
@@ -86,6 +99,19 @@ export default function ContasReceberClient() {
     e.preventDefault()
     if (!form.descricao || !form.valor || !form.data_prevista) return
     setSaving(true)
+    if (editingId) {
+      await supabase.from('contas_receber').update({
+        descricao: form.descricao, origem: form.origem,
+        valor: parseFloat(form.valor), data_prevista: form.data_prevista,
+        observacoes: form.observacoes || null,
+      }).eq('id', editingId)
+      setSaving(false)
+      setModalOpen(false)
+      setEditingId(null)
+      setForm(defaultForm)
+      fetchContas()
+      return
+    }
     await supabase.from('contas_receber').insert({
       descricao: form.descricao, origem: form.origem,
       valor: parseFloat(form.valor), data_prevista: form.data_prevista,
@@ -183,12 +209,18 @@ export default function ContasReceberClient() {
                   </div>
                   <div className="flex items-center justify-between">
                     <StatusBadge status={conta.status} />
-                    {conta.status !== 'recebido' && (
-                      <button onClick={() => handleMarkAsReceived(conta.id)}
-                        className="text-xs font-medium text-green-700 flex items-center gap-1">
-                        <CheckCircle className="w-3.5 h-3.5" /> Marcar recebido
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => openEdit(conta)}
+                        className="text-xs text-gray-400 flex items-center gap-1">
+                        <Pencil className="w-3 h-3" /> Editar
                       </button>
-                    )}
+                      {conta.status !== 'recebido' && (
+                        <button onClick={() => handleMarkAsReceived(conta.id)}
+                          className="text-xs font-medium text-green-700 flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5" /> Recebido
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -215,12 +247,18 @@ export default function ContasReceberClient() {
                     <td className="px-5 py-3.5 text-sm text-gray-600">{formatDate(conta.data_prevista)}</td>
                     <td className="px-5 py-3.5"><StatusBadge status={conta.status} /></td>
                     <td className="px-5 py-3.5 text-right">
-                      {conta.status !== 'recebido' && (
-                        <button onClick={() => handleMarkAsReceived(conta.id)}
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-900">
-                          <CheckCircle className="w-3.5 h-3.5" /> Marcar recebido
+                      <div className="flex items-center justify-end gap-3">
+                        <button onClick={() => openEdit(conta)}
+                          className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700">
+                          <Pencil className="w-3.5 h-3.5" /> Editar
                         </button>
-                      )}
+                        {conta.status !== 'recebido' && (
+                          <button onClick={() => handleMarkAsReceived(conta.id)}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-900">
+                            <CheckCircle className="w-3.5 h-3.5" /> Marcar recebido
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -238,10 +276,10 @@ export default function ContasReceberClient() {
       </div>
 
       {/* Modal Nova Conta */}
-      <Dialog open={modalOpen} onOpenChange={open => { setModalOpen(open); if (!open) setForm(defaultForm) }}>
+      <Dialog open={modalOpen} onOpenChange={open => { setModalOpen(open); if (!open) { setForm(defaultForm); setEditingId(null) } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova Conta a Receber</DialogTitle>
+            <DialogTitle>{editingId ? 'Editar Conta a Receber' : 'Nova Conta a Receber'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-4">
@@ -278,7 +316,7 @@ export default function ContasReceberClient() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving} className="text-white" style={{ backgroundColor: '#2D2566' }}>
-                {saving ? 'Salvando...' : 'Salvar'}
+                {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Salvar'}
               </Button>
             </DialogFooter>
           </form>
