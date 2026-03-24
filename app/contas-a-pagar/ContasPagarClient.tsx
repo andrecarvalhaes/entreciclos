@@ -454,7 +454,8 @@ export default function ContasPagarClient() {
           <DialogHeader>
             <DialogTitle>Nova Conta a Pagar</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-4">
 
             {/* Upload comprovante com IA */}
             <div className="space-y-2">
@@ -609,7 +610,8 @@ export default function ContasPagarClient() {
               </div>
             )}
 
-            <DialogFooter className="mt-6">
+            </div>
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving || analyzing} className="text-white" style={{ backgroundColor: '#2D2566' }}>
                 {saving ? 'Salvando...' : form.recorrente ? `Criar ${form.recorrencia_parcelas} lancamentos` : 'Salvar'}
