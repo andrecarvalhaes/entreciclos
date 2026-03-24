@@ -62,6 +62,10 @@ interface NovaContaForm {
   valor: string
   vencimento: string
   observacoes: string
+  recorrente: boolean
+  recorrencia_meses: string
+  recorrencia_parcelas: string
+  recorrencia_dia: string
 }
 
 const defaultForm: NovaContaForm = {
@@ -71,6 +75,29 @@ const defaultForm: NovaContaForm = {
   valor: '',
   vencimento: '',
   observacoes: '',
+  recorrente: false,
+  recorrencia_meses: '1',
+  recorrencia_parcelas: '12',
+  recorrencia_dia: '',
+}
+
+function calcularVencimentos(diaDoMes: number, intervalMeses: number, parcelas: number): string[] {
+  const dates: string[] = []
+  const hoje = new Date()
+  let ano = hoje.getFullYear()
+  let mes = hoje.getMonth() + 1 // 1-12
+
+  for (let i = 0; i < parcelas; i++) {
+    // Ajustar dia para não ultrapassar o fim do mês
+    const ultimoDia = new Date(ano, mes, 0).getDate()
+    const dia = Math.min(diaDoMes, ultimoDia)
+    const dateStr = `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`
+    dates.push(dateStr)
+    // Avançar intervalMeses
+    mes += intervalMeses
+    while (mes > 12) { mes -= 12; ano++ }
+  }
+  return dates
 }
 
 export default function ContasPagarClient() {
@@ -145,8 +172,35 @@ export default function ContasPagarClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.descricao || !form.valor || !form.vencimento) return
+    if (!form.descricao || !form.valor) return
+    if (!form.recorrente && !form.vencimento) return
+    if (form.recorrente && !form.recorrencia_dia) return
     setSaving(true)
+
+    if (form.recorrente) {
+      // Criar N parcelas
+      const dia = parseInt(form.recorrencia_dia)
+      const meses = parseInt(form.recorrencia_meses) || 1
+      const parcelas = parseInt(form.recorrencia_parcelas) || 1
+      const vencimentos = calcularVencimentos(dia, meses, parcelas)
+      const registros = vencimentos.map((v, i) => ({
+        descricao: parcelas > 1 ? `${form.descricao} (${i + 1}/${parcelas})` : form.descricao,
+        categoria: form.categoria,
+        fornecedor: form.fornecedor || null,
+        valor: parseFloat(form.valor),
+        vencimento: v,
+        observacoes: form.observacoes || null,
+        status: 'pendente',
+      }))
+      await supabase.from('contas_pagar').insert(registros)
+      setSaving(false)
+      setModalOpen(false)
+      setForm(defaultForm)
+      setFile(null)
+      setFilePreview(null)
+      fetchContas()
+      return
+    }
 
     const { data: inserted } = await supabase.from('contas_pagar').insert({
       descricao: form.descricao,
@@ -428,26 +482,92 @@ export default function ContasPagarClient() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="valor">Valor (R$) *</Label>
-                <Input id="valor" type="number" step="0.01" min="0" value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} placeholder="0,00" required />
+            <div className="space-y-1.5">
+              <Label htmlFor="valor">Valor (R$) *</Label>
+              <Input id="valor" type="number" step="0.01" min="0" value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} placeholder="0,00" required />
+            </div>
+
+            {/* Toggle recorrente */}
+            <div
+              className="flex items-center justify-between p-3 rounded-xl border border-gray-200 cursor-pointer select-none"
+              onClick={() => setForm(prev => ({ ...prev, recorrente: !prev.recorrente }))}
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-800">Despesa recorrente</p>
+                <p className="text-xs text-gray-400 mt-0.5">Cria multiplos lancamentos automaticamente</p>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="vencimento">Vencimento *</Label>
-                <Input id="vencimento" type="date" value={form.vencimento} onChange={e => setForm({ ...form, vencimento: e.target.value })} required />
+              <div
+                className="w-10 h-5 rounded-full transition-colors flex items-center px-0.5"
+                style={{ backgroundColor: form.recorrente ? '#2D2566' : '#e5e7eb' }}
+              >
+                <div
+                  className="w-4 h-4 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: form.recorrente ? 'translateX(20px)' : 'translateX(0)' }}
+                />
               </div>
             </div>
+
+            {form.recorrente ? (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rec_parcelas">Parcelas *</Label>
+                  <Input
+                    id="rec_parcelas"
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={form.recorrencia_parcelas}
+                    onChange={e => setForm({ ...form, recorrencia_parcelas: e.target.value })}
+                    placeholder="12"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rec_meses">A cada (meses) *</Label>
+                  <Input
+                    id="rec_meses"
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={form.recorrencia_meses}
+                    onChange={e => setForm({ ...form, recorrencia_meses: e.target.value })}
+                    placeholder="1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="rec_dia">Dia do mes *</Label>
+                  <Input
+                    id="rec_dia"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={form.recorrencia_dia}
+                    onChange={e => setForm({ ...form, recorrencia_dia: e.target.value })}
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="vencimento">Vencimento *</Label>
+                <Input id="vencimento" type="date" value={form.vencimento} onChange={e => setForm({ ...form, vencimento: e.target.value })} />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="observacoes">Observacoes</Label>
               <Input id="observacoes" value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Opcional" />
             </div>
 
+            {form.recorrente && form.recorrencia_dia && form.recorrencia_parcelas && form.recorrencia_meses && (
+              <div className="bg-blue-50 rounded-xl px-4 py-3 text-xs text-blue-700">
+                Serao criados <strong>{form.recorrencia_parcelas} lancamentos</strong> a cada <strong>{form.recorrencia_meses} {parseInt(form.recorrencia_meses) === 1 ? 'mes' : 'meses'}</strong>, todo dia <strong>{form.recorrencia_dia}</strong>, a partir do mes atual.
+              </div>
+            )}
+
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving || analyzing} className="text-white" style={{ backgroundColor: '#2D2566' }}>
-                {saving ? 'Salvando...' : 'Salvar'}
+                {saving ? 'Salvando...' : form.recorrente ? `Criar ${form.recorrencia_parcelas} lancamentos` : 'Salvar'}
               </Button>
             </DialogFooter>
           </form>
